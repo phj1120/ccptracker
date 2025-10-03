@@ -17,40 +17,73 @@ const FIELDNAMES = ['id', 'request', 'response', 'star', 'star_desc', 'request_d
  * Simple CSV parser
  */
 function parseCSV(content) {
-    const lines = content.trim().split('\n');
-    if (lines.length === 0) return [];
+    if (!content.trim()) return [];
 
-    const headers = lines[0].split(',').map(h => h.trim());
     const rows = [];
+    let currentRow = [];
+    let currentField = '';
+    let inQuotes = false;
+    let i = 0;
 
-    for (let i = 1; i < lines.length; i++) {
-        const line = lines[i];
-        if (!line.trim()) continue;
+    // First, extract headers
+    const headerEnd = content.indexOf('\n');
+    if (headerEnd === -1) return [];
+    
+    const headerLine = content.substring(0, headerEnd);
+    const headers = headerLine.split(',').map(h => h.trim());
+    
+    // Start parsing from after the header line
+    i = headerEnd + 1;
 
-        // Simple CSV parsing - handles quoted fields
-        const values = [];
-        let current = '';
-        let inQuotes = false;
+    while (i < content.length) {
+        const char = content[i];
 
-        for (let j = 0; j < line.length; j++) {
-            const char = line[j];
-
-            if (char === '"') {
-                inQuotes = !inQuotes;
-            } else if (char === ',' && !inQuotes) {
-                values.push(current.trim());
-                current = '';
+        if (char === '"') {
+            if (inQuotes && i + 1 < content.length && content[i + 1] === '"') {
+                // Escaped quote
+                currentField += '"';
+                i += 2;
+                continue;
             } else {
-                current += char;
+                inQuotes = !inQuotes;
             }
+        } else if (char === ',' && !inQuotes) {
+            currentRow.push(currentField.trim());
+            currentField = '';
+        } else if (char === '\n' && !inQuotes) {
+            // End of row
+            if (currentField.trim() || currentRow.length > 0) {
+                currentRow.push(currentField.trim());
+                
+                // Create row object
+                if (currentRow.length > 0 && currentRow.some(field => field.trim())) {
+                    const row = {};
+                    headers.forEach((header, index) => {
+                        row[header] = currentRow[index] || '';
+                    });
+                    rows.push(row);
+                }
+                
+                currentRow = [];
+                currentField = '';
+            }
+        } else {
+            currentField += char;
         }
-        values.push(current.trim());
 
-        const row = {};
-        headers.forEach((header, index) => {
-            row[header] = values[index] || '';
-        });
-        rows.push(row);
+        i++;
+    }
+
+    // Handle last row if no trailing newline
+    if (currentField.trim() || currentRow.length > 0) {
+        currentRow.push(currentField.trim());
+        if (currentRow.length > 0 && currentRow.some(field => field.trim())) {
+            const row = {};
+            headers.forEach((header, index) => {
+                row[header] = currentRow[index] || '';
+            });
+            rows.push(row);
+        }
     }
 
     return rows;
