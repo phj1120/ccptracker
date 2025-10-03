@@ -1,6 +1,6 @@
 # ccptracker 🤖📊
 
-> [한국어 문서](README_KR.md) | English Documentation
+> [한국어 문서](README_KR.md) | [개인회고](https://www.notion.so/phjun1120/ccptracker-Claude-Code-Prompt-Tracker-2815a5f721a68035aa88c6f818ab9d0a?source=copy_link)
 
 **Claude Code conversation tracker and satisfaction logger**
 
