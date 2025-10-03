@@ -12,6 +12,7 @@ ccptracker를 사용하면 Claude Code와의 모든 대화를 자동으로 기�
 - 📁 **데이터 내보내기**: CSV 또는 JSON 형태로 데이터를 내보낼 수 있습니다
 - 🚀 **원클릭 설치**: `npx ccptracker init`로 간단하게 설치
 - 🔧 **자동 설정**: `.claude/settings.json` 훅이 자동으로 등록됩니다
+- 📝 **Git 친화적**: 기본적으로 대화 데이터를 Git에서 추적하여 팀 공유 가능
 
 ## 🚀 빠른 시작
 
@@ -20,7 +21,11 @@ ccptracker를 사용하면 Claude Code와의 모든 대화를 자동으로 기�
 Claude Code 프로젝트 디렉토리에서 다음 명령어를 실행하세요:
 
 ```bash
+# 기본 설치 (CSV 파일을 Git에서 추적)
 npx ccptracker init
+
+# CSV 파일도 gitignore에 추가하여 숨기기
+npx ccptracker init --githide
 ```
 
 ### 2. 사용
@@ -50,7 +55,7 @@ npx ccptracker status
 📝 Total conversations: 25
 ⭐ Average satisfaction: 4.2/5 ⭐⭐⭐⭐
 🕒 Last conversation: 2025-01-03 13:45:32
-📁 Data location: ./cpm/data/claude-conversations.csv
+📁 Data location: ./ccptracker/data/ccptracker.csv
 ```
 
 ## 📖 사용법
@@ -58,11 +63,17 @@ npx ccptracker status
 ### 설치 명령어
 
 ```bash
-# 새 프로젝트에 ccptracker 설치
+# 새 프로젝트에 ccptracker 설치 (CSV 파일을 Git에서 추적)
 npx ccptracker init
 
 # 기존 설치를 덮어쓰기
 npx ccptracker init --force
+
+# CSV 파일도 gitignore에 추가하여 Git에서 숨기기
+npx ccptracker init --githide
+
+# 강제 설치 + CSV 숨기기
+npx ccptracker init --force --githide
 ```
 
 ### 상태 확인
@@ -103,14 +114,15 @@ ccptracker를 설치하면 다음과 같은 구조가 생성됩니다:
 your-project/
 ├── .claude/
 │   └── settings.json        # Claude Code 훅 설정 (자동 등록)
-└── cpm/
+├── .gitignore               # ccptracker/ 자동 추가됨
+└── ccptracker/
     ├── hooks/               # 훅 스크립트들
     │   ├── user-prompt-submit
     │   ├── stop
     │   ├── csv-updater.py
     │   └── stop-parse-transcript.py
     ├── data/
-    │   └── claude-conversations.csv  # 대화 데이터
+    │   └── ccptracker.csv   # 대화 데이터 (기본적으로 Git에서 추적됨)
     ├── logs/                # 디버그 로그
     └── temp/                # 임시 파일
 ```
@@ -166,7 +178,7 @@ ccptracker가 자동으로 `.claude/settings.json`을 수정하지만, 수동으
         "hooks": [
           {
             "type": "command",
-            "command": "./cpm/hooks/user-prompt-submit"
+            "command": "./ccptracker/hooks/user-prompt-submit"
           }
         ]
       }
@@ -177,7 +189,7 @@ ccptracker가 자동으로 `.claude/settings.json`을 수정하지만, 수동으
         "hooks": [
           {
             "type": "command",
-            "command": "./cpm/hooks/stop"
+            "command": "./ccptracker/hooks/stop"
           }
         ]
       }
@@ -192,10 +204,10 @@ ccptracker가 자동으로 `.claude/settings.json`을 수정하지만, 수동으
 
 ```bash
 # 사용자 프롬프트 훅 로그
-cat cpm/logs/user-prompt-submit-debug.log
+cat ccptracker/logs/user-prompt-submit-debug.log
 
 # 응답 처리 훅 로그
-cat cpm/logs/stop-hook-debug.log
+cat ccptracker/logs/stop-hook-debug.log
 ```
 
 ## 🤝 프로그래밍 인터페이스
@@ -227,7 +239,7 @@ await ccptracker.remove('/path/to/project');
 A: 아니요. ccptracker는 Claude Code의 훅 시스템을 사용하므로 Claude Code 프로젝트에서만 작동합니다.
 
 ### Q: 기존 대화 데이터는 어떻게 되나요?
-A: ccptracker는 기존 데이터를 보존합니다. 제거할 때만 `cpm/` 디렉토리가 삭제됩니다.
+A: ccptracker는 기존 데이터를 보존합니다. 제거할 때만 `ccptracker/` 디렉토리가 삭제됩니다.
 
 ### Q: 만족도 평가를 건너뛸 수 있나요?
 A: 네, 1-5 숫자 대신 다른 프롬프트를 입력하면 평가 없이 다음 대화로 넘어갑니다.
@@ -237,6 +249,12 @@ A: 네, 각 프로젝트마다 독립적으로 설치하고 사용할 수 있습
 
 ### Q: Windows에서도 작동하나요?
 A: 네, Node.js와 Python이 설치되어 있다면 Windows, macOS, Linux 모두에서 작동합니다.
+
+### Q: CSV 파일이 Git에 추가되는 것을 막으려면?
+A: `--githide` 옵션을 사용하세요: `npx ccptracker init --githide`. 이렇게 하면 CSV 파일도 gitignore에 추가됩니다.
+
+### Q: 팀원들과 대화 데이터를 공유하고 싶어요
+A: 기본 설치(`npx ccptracker init`)를 사용하면 CSV 파일이 Git에서 추적되어 팀원들과 공유할 수 있습니다.
 
 ## 🐛 문제 해결
 
@@ -248,7 +266,7 @@ A: 네, Node.js와 Python이 설치되어 있다면 Windows, macOS, Linux 모두
 ### 대화가 기록되지 않을 때
 1. `npx ccptracker status`로 설치 상태를 확인하세요
 2. `.claude/settings.json`에 훅이 제대로 등록되어 있는지 확인하세요
-3. `cpm/logs/` 디렉토리의 로그 파일을 확인하세요
+3. `ccptracker/logs/` 디렉토리의 로그 파일을 확인하세요
 
 ### 만족도 평가가 작동하지 않을 때
 1. 숫자 1-5만 입력했는지 확인하세요
@@ -268,7 +286,7 @@ MIT License
 
 ## 📞 지원
 
-- 이슈: [GitHub Issues](https://github.com/claude-code/ccptracker/issues)
+- 이슈: [GitHub Issues](https://github.com/phj1120/ccptracker/issues)
 - 문서: [README.md](https://github.com/claude-code/ccptracker/blob/main/README.md)
 
 ---

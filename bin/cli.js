@@ -18,6 +18,7 @@ program
   .command('init')
   .description('Initialize ccptracker in the current project')
   .option('-f, --force', 'Force installation even if already exists')
+  .option('--githide', 'Hide CSV data file in .gitignore (by default CSV file is tracked)')
   .action(async (options) => {
     try {
       console.log(chalk.blue('🚀 Initializing ccptracker...'));
@@ -27,7 +28,14 @@ program
       if (result.success) {
         console.log(chalk.green('✅ ccptracker has been successfully installed!'));
         console.log(chalk.cyan('✅ .claude/settings.json hooks registered'));
-        console.log(chalk.cyan('✅ cpm/ directory structure created'));
+        console.log(chalk.cyan('✅ ccptracker/ directory structure created'));
+
+        if (options.githide) {
+          console.log(chalk.cyan('✅ .gitignore updated to ignore ccptracker/ folder and CSV file'));
+        } else {
+          console.log(chalk.cyan('✅ .gitignore updated to ignore ccptracker/ folder (CSV file will be tracked)'));
+        }
+
         console.log(chalk.yellow('\n💡 Start using Claude Code and your conversations will be tracked automatically!'));
         console.log(chalk.gray('   Rate conversations with 1-5 after each response.'));
       } else {
@@ -104,7 +112,8 @@ program
       if (result.success) {
         console.log(chalk.green('✅ ccptracker has been successfully removed'));
         console.log(chalk.cyan('✅ .claude/settings.json hooks unregistered'));
-        console.log(chalk.cyan('✅ cpm/ directory removed'));
+        console.log(chalk.cyan('✅ ccptracker/ directory removed'));
+        console.log(chalk.cyan('✅ .gitignore updated to remove ccptracker/ entry'));
       } else {
         console.log(chalk.red('❌ Removal failed:'), result.error);
         process.exit(1);
