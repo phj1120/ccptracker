@@ -1,0 +1,49 @@
+{
+  "name": "cctracker",
+  "version": "1.0.0",
+  "description": "Claude Code conversation tracker and satisfaction logger",
+  "main": "lib/index.js",
+  "bin": {
+    "cctracker": "bin/cli.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node bin/cli.js"
+  },
+  "keywords": [
+    "claude",
+    "conversation",
+    "tracker",
+    "cli",
+    "satisfaction",
+    "logging",
+    "claude-code"
+  ],
+  "author": "Claude Code Community",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^11.0.0",
+    "inquirer": "^9.2.0",
+    "fs-extra": "^11.1.0",
+    "chalk": "^4.1.2",
+    "csv-parser": "^3.0.0",
+    "csv-writer": "^1.6.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/claude-code/cctracker.git"
+  },
+  "bugs": {
+    "url": "https://github.com/claude-code/cctracker/issues"
+  },
+  "homepage": "https://github.com/claude-code/cctracker#readme",
+  "files": [
+    "bin/",
+    "lib/",
+    "templates/",
+    "README.md"
+  ]
+}
