@@ -121,8 +121,8 @@ your-project/
     ├── hooks/               # Hook scripts
     │   ├── user-prompt-submit
     │   ├── stop
-    │   ├── csv-updater.py
-    │   └── stop-parse-transcript.py
+    │   ├── csv-updater.js
+    │   └── stop-parse-transcript.js
     ├── data/
     │   └── ccptracker.csv   # Conversation data (tracked by Git by default)
     ├── logs/                # Debug logs
@@ -250,7 +250,7 @@ A: Yes, enter anything other than numbers 1-5 to skip rating and continue to the
 A: Yes, you can install and use it independently in each project.
 
 ### Q: Does it work on Windows?
-A: Yes, it works on Windows, macOS, and Linux as long as Node.js and Python are installed.
+A: Yes, it works on Windows, macOS, and Linux as long as Node.js is installed.
 
 ### Q: How to prevent CSV file from being added to Git?
 A: Use the `--githide` option: `npx ccptracker init --githide`. This will add the CSV file to gitignore as well.
@@ -263,7 +263,6 @@ A: Use the default installation (`npx ccptracker init`) - the CSV file will be t
 ### Installation Issues
 1. Make sure you're in a Claude Code project directory (`.claude/` folder exists)
 2. Verify Node.js 14+ is installed
-3. Verify Python 3.x is installed
 
 ### Conversations Not Being Recorded
 1. Check installation status with `npx ccptracker status`

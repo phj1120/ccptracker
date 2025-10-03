@@ -9,18 +9,18 @@ INPUT=$(cat)
 # Extract necessary information
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 # Use session_id passed from Claude
-SESSION_ID=$(echo "$INPUT" | python3 -c "import sys, json; data=json.load(sys.stdin); print(data.get('session_id', ''))" 2>/dev/null || echo "")
+SESSION_ID=$(echo "$INPUT" | node -pe "JSON.parse(require('fs').readFileSync(0, 'utf8')).session_id || ''" 2>/dev/null || echo "")
 if [ -z "$SESSION_ID" ]; then
     SESSION_ID=$(uuidgen | tr '[:upper:]' '[:lower:]')
 fi
 PROJECT_PATH=$(pwd)
 
-# Extract user_prompt from JSON (use jq, fallback to Python if not available)
+# Extract user_prompt from JSON (use jq, fallback to Node.js if not available)
 if command -v jq &> /dev/null; then
     USER_PROMPT=$(echo "$INPUT" | jq -r '.user_input // .prompt // ""' 2>/dev/null || echo "")
 else
-    # Parse with Python if jq is not available
-    USER_PROMPT=$(echo "$INPUT" | python3 -c "import sys, json; data=json.load(sys.stdin); print(data.get('user_input', data.get('prompt', '')))" 2>/dev/null || echo "")
+    # Parse with Node.js if jq is not available
+    USER_PROMPT=$(echo "$INPUT" | node -pe "const data=JSON.parse(require('fs').readFileSync(0, 'utf8')); data.user_input || data.prompt || ''" 2>/dev/null || echo "")
 fi
 
 # Use entire stdin if prompt is empty
@@ -56,7 +56,7 @@ TRIMMED_PROMPT=$(echo "$USER_PROMPT" | xargs)
 if [[ "$TRIMMED_PROMPT" =~ ^[1-5]$ ]]; then
     # Check previous session information
     if [ -f "$SESSION_FILE" ]; then
-        PREV_SESSION_ID=$(python3 -c "import json; f=open('$SESSION_FILE'); d=json.load(f); print(d['session_id'])" 2>/dev/null)
+        PREV_SESSION_ID=$(node -pe "JSON.parse(require('fs').readFileSync('$SESSION_FILE', 'utf8')).session_id" 2>/dev/null)
 
         {
             echo "PREV_SESSION_ID: [$PREV_SESSION_ID]"
@@ -64,7 +64,7 @@ if [[ "$TRIMMED_PROMPT" =~ ^[1-5]$ ]]; then
 
         if [ -n "$PREV_SESSION_ID" ]; then
             # Save feedback
-            python3 "$SCRIPT_DIR/csv-updater.py" update-satisfaction "$PREV_SESSION_ID" "$TRIMMED_PROMPT" "" > /dev/null 2>&1
+            node "$SCRIPT_DIR/csv-updater.js" update-satisfaction "$PREV_SESSION_ID" "$TRIMMED_PROMPT" "" > /dev/null 2>&1
 
             {
                 echo "Satisfaction saved for session: $PREV_SESSION_ID"
@@ -108,6 +108,6 @@ cat > "$SESSION_FILE" << EOF
 EOF
 
 # Add new row to CSV
-python3 "$SCRIPT_DIR/csv-updater.py" add "$SESSION_ID" "$TIMESTAMP" "$PROJECT_PATH" "$USER_PROMPT"
+node "$SCRIPT_DIR/csv-updater.js" add "$SESSION_ID" "$TIMESTAMP" "$PROJECT_PATH" "$USER_PROMPT"
 
 exit 0

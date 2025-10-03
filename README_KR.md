@@ -121,8 +121,8 @@ your-project/
     ├── hooks/               # 훅 스크립트들
     │   ├── user-prompt-submit
     │   ├── stop
-    │   ├── csv-updater.py
-    │   └── stop-parse-transcript.py
+    │   ├── csv-updater.js
+    │   └── stop-parse-transcript.js
     ├── data/
     │   └── ccptracker.csv   # 대화 데이터 (기본적으로 Git에서 추적됨)
     ├── logs/                # 디버그 로그
@@ -250,7 +250,7 @@ A: 네, 1-5 숫자 대신 다른 프롬프트를 입력하면 평가 없이 다�
 A: 네, 각 프로젝트마다 독립적으로 설치하고 사용할 수 있습니다.
 
 ### Q: Windows에서도 작동하나요?
-A: 네, Node.js와 Python이 설치되어 있다면 Windows, macOS, Linux 모두에서 작동합니다.
+A: 네, Node.js가 설치되어 있다면 Windows, macOS, Linux 모두에서 작동합니다.
 
 ### Q: CSV 파일이 Git에 추가되는 것을 막으려면?
 A: `--githide` 옵션을 사용하세요: `npx ccptracker init --githide`. 이렇게 하면 CSV 파일도 gitignore에 추가됩니다.
@@ -263,7 +263,6 @@ A: 기본 설치(`npx ccptracker init`)를 사용하면 CSV 파일이 Git에서 
 ### 설치가 안 될 때
 1. Claude Code 프로젝트 디렉토리인지 확인하세요 (`.claude/` 폴더 존재)
 2. Node.js 14+ 버전이 설치되어 있는지 확인하세요
-3. Python 3.x가 설치되어 있는지 확인하세요
 
 ### 대화가 기록되지 않을 때
 1. `npx ccptracker status`로 설치 상태를 확인하세요
