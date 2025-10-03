@@ -116,7 +116,16 @@ function writeCSV(rows) {
  * Read CSV file
  */
 function readCSV() {
+    // Ensure directory exists
+    const csvDir = path.dirname(CSV_FILE);
+    if (!fs.existsSync(csvDir)) {
+        fs.mkdirSync(csvDir, { recursive: true });
+    }
+
     if (!fs.existsSync(CSV_FILE)) {
+        // Create CSV file with headers if it doesn't exist
+        const content = FIELDNAMES.join(',') + '\n';
+        fs.writeFileSync(CSV_FILE, content, 'utf8');
         return [];
     }
 
@@ -141,6 +150,21 @@ function saveCSV(rows) {
     } catch (error) {
         console.error('Error writing CSV:', error.message);
     }
+}
+
+/**
+ * Get current local time in YYYY-MM-DD HH:MM:SS format
+ */
+function getLocalDatetime() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
 /**
@@ -170,9 +194,9 @@ function formatDatetimeId(dtString) {
 function addRow(sessionId, timestamp, projectPath, userPrompt) {
     const rows = readCSV();
 
-    // ID is numeric format, request_dtm is readable format
-    const rowId = formatDatetimeId(timestamp);
-    const requestDtm = timestamp; // Use YYYY-MM-DD HH:MM:SS format as-is
+    // Use local time for both ID and request_dtm
+    const localTime = getLocalDatetime();
+    const rowId = formatDatetimeId(localTime);
 
     const newRow = {
         id: rowId,
@@ -180,7 +204,7 @@ function addRow(sessionId, timestamp, projectPath, userPrompt) {
         response: '',
         star: '',
         star_desc: '',
-        request_dtm: requestDtm,
+        request_dtm: localTime,
         response_dtm: '',
         star_dtm: ''
     };
@@ -198,9 +222,8 @@ function updateResponse(sessionId, response, duration, toolsUsed, toolsCount) {
 
     // Update most recent row
     if (rows.length > 0) {
-        const responseDtm = new Date().toISOString().slice(0, 19).replace('T', ' ');
         rows[rows.length - 1].response = response;
-        rows[rows.length - 1].response_dtm = responseDtm;
+        rows[rows.length - 1].response_dtm = getLocalDatetime();
     }
 
     saveCSV(rows);
@@ -215,10 +238,9 @@ function updateSatisfaction(sessionId, score, comment) {
 
     // Update most recent row
     if (rows.length > 0) {
-        const starDtm = new Date().toISOString().slice(0, 19).replace('T', ' ');
         rows[rows.length - 1].star = String(score);
         rows[rows.length - 1].star_desc = comment;
-        rows[rows.length - 1].star_dtm = starDtm;
+        rows[rows.length - 1].star_dtm = getLocalDatetime();
     }
 
     saveCSV(rows);

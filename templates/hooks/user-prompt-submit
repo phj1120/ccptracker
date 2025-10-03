@@ -35,6 +35,11 @@ CCPTRACKER_DIR="$(dirname "$SCRIPT_DIR")"
 # Session information file
 SESSION_FILE="$CCPTRACKER_DIR/temp/current-session.json"
 
+# Ensure necessary directories exist
+mkdir -p "$CCPTRACKER_DIR/temp"
+mkdir -p "$CCPTRACKER_DIR/logs"
+mkdir -p "$CCPTRACKER_DIR/data"
+
 # Check feedback pattern (numbers 1-5 only)
 TRIMMED_PROMPT=$(echo "$USER_PROMPT" | xargs)
 

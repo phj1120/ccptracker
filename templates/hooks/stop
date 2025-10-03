@@ -7,6 +7,11 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CCPTRACKER_DIR="$(dirname "$SCRIPT_DIR")"
 
+# Ensure necessary directories exist
+mkdir -p "$CCPTRACKER_DIR/temp"
+mkdir -p "$CCPTRACKER_DIR/logs"
+mkdir -p "$CCPTRACKER_DIR/data"
+
 # Read input data
 INPUT=$(cat)
 
@@ -29,36 +34,42 @@ fi
 
 SESSION_ID=$(node -pe "JSON.parse(require('fs').readFileSync('$SESSION_FILE', 'utf8')).session_id")
 
-# Extract transcript file path - use most recent file
+# Extract transcript file path - use exact path from input first
 ORIGINAL_TRANSCRIPT=$(echo "$INPUT" | node -pe "JSON.parse(require('fs').readFileSync(0, 'utf8')).transcript_path || ''" 2>/dev/null || echo "")
 
-# Dynamically find transcript file for current project
-PROJECT_NAME=$(basename "$(pwd)" | sed 's/[^a-zA-Z0-9]/-/g')
-PROJECT_PATH_ENCODED=$(pwd | sed 's|/|-|g')
-
-# Find transcript matching current project in Claude Code project directory
-CLAUDE_PROJECTS_DIR="$HOME/.claude/projects"
+# Use original transcript path if it exists, otherwise find alternative
 TRANSCRIPT_PATH=""
 
-if [ -d "$CLAUDE_PROJECTS_DIR" ]; then
-    # Find transcript directory based on project path
-    TRANSCRIPT_DIR=$(find "$CLAUDE_PROJECTS_DIR" -type d -name "*$(basename "$(pwd)")*" | head -1)
+if [ -n "$ORIGINAL_TRANSCRIPT" ] && [ -f "$ORIGINAL_TRANSCRIPT" ]; then
+    TRANSCRIPT_PATH="$ORIGINAL_TRANSCRIPT"
+else
+    # Fallback: find transcript file for current project
+    PROJECT_NAME=$(basename "$(pwd)" | sed 's/[^a-zA-Z0-9]/-/g')
+    PROJECT_PATH_ENCODED=$(pwd | sed 's|/|-|g')
 
-    if [ -n "$TRANSCRIPT_DIR" ]; then
-        TRANSCRIPT_PATH=$(ls -t "$TRANSCRIPT_DIR"/*.jsonl 2>/dev/null | head -1)
-    fi
+    # Find transcript matching current project in Claude Code project directory
+    CLAUDE_PROJECTS_DIR="$HOME/.claude/projects"
 
-    # If not found, find by encoding current project path
-    if [ -z "$TRANSCRIPT_PATH" ]; then
-        TRANSCRIPT_DIR=$(find "$CLAUDE_PROJECTS_DIR" -type d -name "*$PROJECT_PATH_ENCODED*" | head -1)
+    if [ -d "$CLAUDE_PROJECTS_DIR" ]; then
+        # Find transcript directory based on project path
+        TRANSCRIPT_DIR=$(find "$CLAUDE_PROJECTS_DIR" -type d -name "*$(basename "$(pwd)")*" | head -1)
+
         if [ -n "$TRANSCRIPT_DIR" ]; then
             TRANSCRIPT_PATH=$(ls -t "$TRANSCRIPT_DIR"/*.jsonl 2>/dev/null | head -1)
         fi
-    fi
 
-    # If still not found, use most recently modified file
-    if [ -z "$TRANSCRIPT_PATH" ]; then
-        TRANSCRIPT_PATH=$(find "$CLAUDE_PROJECTS_DIR" -name "*.jsonl" -type f -exec ls -t {} + 2>/dev/null | head -1)
+        # If not found, find by encoding current project path
+        if [ -z "$TRANSCRIPT_PATH" ]; then
+            TRANSCRIPT_DIR=$(find "$CLAUDE_PROJECTS_DIR" -type d -name "*$PROJECT_PATH_ENCODED*" | head -1)
+            if [ -n "$TRANSCRIPT_DIR" ]; then
+                TRANSCRIPT_PATH=$(ls -t "$TRANSCRIPT_DIR"/*.jsonl 2>/dev/null | head -1)
+            fi
+        fi
+
+        # If still not found, use most recently modified file
+        if [ -z "$TRANSCRIPT_PATH" ]; then
+            TRANSCRIPT_PATH=$(find "$CLAUDE_PROJECTS_DIR" -name "*.jsonl" -type f -exec ls -t {} + 2>/dev/null | head -1)
+        fi
     fi
 fi
 
