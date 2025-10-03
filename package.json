@@ -1,10 +1,10 @@
 {
-  "name": "cctracker",
+  "name": "ccptracker",
   "version": "1.0.0",
   "description": "Claude Code conversation tracker and satisfaction logger",
   "main": "lib/index.js",
   "bin": {
-    "cctracker": "bin/cli.js"
+    "ccptracker": "bin/cli.js"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -19,7 +19,7 @@
     "logging",
     "claude-code"
   ],
-  "author": "Claude Code Community",
+  "author": "phjun1120",
   "license": "MIT",
   "dependencies": {
     "commander": "^11.0.0",
@@ -34,12 +34,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/claude-code/cctracker.git"
+    "url": "git+ https://github.com/phj1120/ccptracker.git"
   },
   "bugs": {
-    "url": "https://github.com/claude-code/cctracker/issues"
+    "url": " https://github.com/phj1120/ccptracker/issues"
   },
-  "homepage": "https://github.com/claude-code/cctracker#readme",
+  "homepage": "https://github.com/phj1120/ccptracker#readme",
   "files": [
     "bin/",
     "lib/",

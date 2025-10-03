@@ -9,23 +9,23 @@ const config = require('../lib/config');
 const program = new Command();
 
 program
-  .name('cctracker')
+  .name('ccptracker')
   .description('Claude Code conversation tracker and satisfaction logger')
   .version(packageJson.version);
 
-// init 명령어 - cctracker 설치
+// init 명령어 - ccptracker 설치
 program
   .command('init')
-  .description('Initialize cctracker in the current project')
+  .description('Initialize ccptracker in the current project')
   .option('-f, --force', 'Force installation even if already exists')
   .action(async (options) => {
     try {
-      console.log(chalk.blue('🚀 Initializing cctracker...'));
+      console.log(chalk.blue('🚀 Initializing ccptracker...'));
 
       const result = await installer.install(process.cwd(), options);
 
       if (result.success) {
-        console.log(chalk.green('✅ cctracker has been successfully installed!'));
+        console.log(chalk.green('✅ ccptracker has been successfully installed!'));
         console.log(chalk.cyan('✅ .claude/settings.json hooks registered'));
         console.log(chalk.cyan('✅ cpm/ directory structure created'));
         console.log(chalk.yellow('\n💡 Start using Claude Code and your conversations will be tracked automatically!'));
@@ -40,21 +40,21 @@ program
     }
   });
 
-// status 명령어 - cctracker 상태 확인
+// status 명령어 - ccptracker 상태 확인
 program
   .command('status')
-  .description('Show cctracker status and statistics')
+  .description('Show ccptracker status and statistics')
   .action(async () => {
     try {
       const status = await config.getStatus(process.cwd());
 
       if (!status.installed) {
-        console.log(chalk.yellow('⚠️  cctracker is not installed in this project'));
-        console.log(chalk.gray('   Run "npx cctracker init" to install'));
+        console.log(chalk.yellow('⚠️  ccptracker is not installed in this project'));
+        console.log(chalk.gray('   Run "npx ccptracker init" to install'));
         return;
       }
 
-      console.log(chalk.blue('📊 cctracker Status'));
+      console.log(chalk.blue('📊 ccptracker Status'));
       console.log(chalk.green('✅ Installed and configured'));
       console.log(`📝 Total conversations: ${chalk.cyan(status.totalConversations)}`);
 
@@ -75,10 +75,10 @@ program
     }
   });
 
-// remove 명령어 - cctracker 제거
+// remove 명령어 - ccptracker 제거
 program
   .command('remove')
-  .description('Remove cctracker from the current project')
+  .description('Remove ccptracker from the current project')
   .option('-f, --force', 'Force removal without confirmation')
   .action(async (options) => {
     try {
@@ -87,7 +87,7 @@ program
         const answers = await inquirer.prompt([{
           type: 'confirm',
           name: 'confirm',
-          message: 'Are you sure you want to remove cctracker? This will delete all conversation data.',
+          message: 'Are you sure you want to remove ccptracker? This will delete all conversation data.',
           default: false
         }]);
 
@@ -97,12 +97,12 @@ program
         }
       }
 
-      console.log(chalk.blue('🗑️  Removing cctracker...'));
+      console.log(chalk.blue('🗑️  Removing ccptracker...'));
 
       const result = await installer.remove(process.cwd());
 
       if (result.success) {
-        console.log(chalk.green('✅ cctracker has been successfully removed'));
+        console.log(chalk.green('✅ ccptracker has been successfully removed'));
         console.log(chalk.cyan('✅ .claude/settings.json hooks unregistered'));
         console.log(chalk.cyan('✅ cpm/ directory removed'));
       } else {
