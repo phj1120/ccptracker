@@ -1,16 +1,16 @@
 #!/bin/bash
 ###
-### Stop Hook - Claude 응답 완료 시 CSV 업데이트
+### Stop Hook - Update CSV when Claude response is completed
 ###
 
-# 프로젝트 cpm 디렉토리 경로
+# Project ccptracker directory path
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CPM_DIR="$(dirname "$SCRIPT_DIR")"
+CCPTRACKER_DIR="$(dirname "$SCRIPT_DIR")"
 
-# 입력 데이터 읽기
+# Read input data
 INPUT=$(cat)
 
-# 디버깅: 입력 데이터 로그
+# Debug: log input data
 {
     echo "=== Stop Hook Debug Log ==="
     echo "Time: $(date '+%Y-%m-%d %H:%M:%S')"
@@ -18,37 +18,37 @@ INPUT=$(cat)
     echo "Input JSON:"
     echo "$INPUT"
     echo ""
-} > "$CPM_DIR/logs/stop-hook-debug.log"
+} > "$CCPTRACKER_DIR/logs/stop-hook-debug.log"
 
-# 세션 정보 로드
-SESSION_FILE="$CPM_DIR/temp/current-session.json"
+# Load session information
+SESSION_FILE="$CCPTRACKER_DIR/temp/current-session.json"
 if [ ! -f "$SESSION_FILE" ]; then
-    # 세션 정보가 없으면 종료 (프롬프트 제출 없이 실행된 경우)
+    # Exit if no session information (executed without prompt submission)
     exit 0
 fi
 
 SESSION_ID=$(python3 -c "import json; f=open('$SESSION_FILE'); d=json.load(f); print(d['session_id'])")
 
-# Transcript 파일 경로 추출 - 가장 최근 파일을 사용
+# Extract transcript file path - use most recent file
 ORIGINAL_TRANSCRIPT=$(echo "$INPUT" | python3 -c "import sys, json; data=json.load(sys.stdin); print(data.get('transcript_path', ''))" 2>/dev/null || echo "")
 
-# 현재 프로젝트의 transcript 파일을 동적으로 찾기
+# Dynamically find transcript file for current project
 PROJECT_NAME=$(basename "$(pwd)" | sed 's/[^a-zA-Z0-9]/-/g')
 PROJECT_PATH_ENCODED=$(pwd | sed 's|/|-|g')
 
-# Claude Code 프로젝트 디렉토리에서 현재 프로젝트와 매칭되는 transcript 찾기
+# Find transcript matching current project in Claude Code project directory
 CLAUDE_PROJECTS_DIR="$HOME/.claude/projects"
 TRANSCRIPT_PATH=""
 
 if [ -d "$CLAUDE_PROJECTS_DIR" ]; then
-    # 프로젝트 경로 기반으로 transcript 디렉토리 찾기
+    # Find transcript directory based on project path
     TRANSCRIPT_DIR=$(find "$CLAUDE_PROJECTS_DIR" -type d -name "*$(basename "$(pwd)")*" | head -1)
 
     if [ -n "$TRANSCRIPT_DIR" ]; then
         TRANSCRIPT_PATH=$(ls -t "$TRANSCRIPT_DIR"/*.jsonl 2>/dev/null | head -1)
     fi
 
-    # 못 찾으면 현재 프로젝트 경로를 인코딩해서 찾기
+    # If not found, find by encoding current project path
     if [ -z "$TRANSCRIPT_PATH" ]; then
         TRANSCRIPT_DIR=$(find "$CLAUDE_PROJECTS_DIR" -type d -name "*$PROJECT_PATH_ENCODED*" | head -1)
         if [ -n "$TRANSCRIPT_DIR" ]; then
@@ -56,54 +56,54 @@ if [ -d "$CLAUDE_PROJECTS_DIR" ]; then
         fi
     fi
 
-    # 그래도 못 찾으면 가장 최근 수정된 파일 사용
+    # If still not found, use most recently modified file
     if [ -z "$TRANSCRIPT_PATH" ]; then
         TRANSCRIPT_PATH=$(find "$CLAUDE_PROJECTS_DIR" -name "*.jsonl" -type f -exec ls -t {} + 2>/dev/null | head -1)
     fi
 fi
 
-# 디버깅: transcript 정보
+# Debug: transcript information
 {
     echo "Original transcript: $ORIGINAL_TRANSCRIPT"
     echo "Using transcript: $TRANSCRIPT_PATH"
     echo "File size: $(wc -c < "$TRANSCRIPT_PATH" 2>/dev/null || echo 0) bytes"
-} >> "$CPM_DIR/logs/stop-hook-debug.log"
+} >> "$CCPTRACKER_DIR/logs/stop-hook-debug.log"
 
-# 응답 내용 추출 (transcript에서 마지막 assistant 메시지)
+# Extract response content (last assistant message from transcript)
 RESPONSE=""
 TOOLS_USED=""
 TOOLS_COUNT=0
 
 if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
-    # Python 스크립트로 transcript 파싱
+    # Parse transcript with Python script
     RESPONSE=$(python3 "$SCRIPT_DIR/stop-parse-transcript.py" "$TRANSCRIPT_PATH")
 
-    # JSON 파싱
+    # JSON parsing
     CLAUDE_RESPONSE=$(echo "$RESPONSE" | python3 -c "import sys, json; d=json.load(sys.stdin); print(d.get('response', ''))")
     TOOLS_USED=$(echo "$RESPONSE" | python3 -c "import sys, json; d=json.load(sys.stdin); print(d.get('tools_used', ''))")
     TOOLS_COUNT=$(echo "$RESPONSE" | python3 -c "import sys, json; d=json.load(sys.stdin); print(d.get('tools_count', 0))")
 
-    # 디버깅: 파싱 결과
+    # Debug: parsing results
     {
         echo ""
         echo "Parsed response length: ${#CLAUDE_RESPONSE}"
         echo "Response preview: ${CLAUDE_RESPONSE:0:200}"
         echo "Tools used: $TOOLS_USED"
         echo "Tools count: $TOOLS_COUNT"
-    } >> "$CPM_DIR/logs/stop-hook-debug.log"
+    } >> "$CCPTRACKER_DIR/logs/stop-hook-debug.log"
 fi
 
-# 소요 시간 계산 (대략적)
+# Calculate elapsed time (approximate)
 START_TIME=$(python3 -c "import json; f=open('$SESSION_FILE'); d=json.load(f); print(d['timestamp'])")
 END_TIME=$(date '+%Y-%m-%d %H:%M:%S')
 
-# 초 단위 계산
+# Calculate in seconds
 DURATION=$(python3 -c "from datetime import datetime; start=datetime.strptime('$START_TIME', '%Y-%m-%d %H:%M:%S'); end=datetime.strptime('$END_TIME', '%Y-%m-%d %H:%M:%S'); print(int((end-start).total_seconds()))")
 
-# CSV 업데이트 (응답 정보)
+# Update CSV (response information)
 python3 "$SCRIPT_DIR/csv-updater.py" update-response "$SESSION_ID" "$CLAUDE_RESPONSE" "$DURATION" "$TOOLS_USED" "$TOOLS_COUNT"
 
-# 현재 응답의 세션 정보를 SESSION_FILE에 저장 (다음 만족도 평가를 위해)
+# Save current response session information to SESSION_FILE (for next satisfaction rating)
 cat > "$SESSION_FILE" << EOF
 {
   "session_id": "$SESSION_ID",
@@ -112,11 +112,11 @@ cat > "$SESSION_FILE" << EOF
 }
 EOF
 
-# 피드백 안내 메시지 (JSON으로 반환)
+# Feedback guidance message (return as JSON)
 cat << 'EOFMSG'
 {
   "decision": "proceed",
-  "message": "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n💡 만족도 평가: 다음 프롬프트에 1-5 입력\n[1] ⭐ 매우 별로 [2] ⭐⭐ 별로 [3] ⭐⭐⭐ 중간\n[4] ⭐⭐⭐⭐ 좋음 [5] ⭐⭐⭐⭐⭐ 매우 좋음\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  "message": "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n💡 Rate satisfaction: Enter 1-5 in next prompt\n[1] ⭐ Very Poor [2] ⭐⭐ Poor [3] ⭐⭐⭐ Average\n[4] ⭐⭐⭐⭐ Good [5] ⭐⭐⭐⭐⭐ Excellent\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 }
 EOFMSG
 

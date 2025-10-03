@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./cpm/hooks/user-prompt-submit"
+            "command": "./ccptracker/hooks/user-prompt-submit"
           }
         ]
       }
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./cpm/hooks/stop"
+            "command": "./ccptracker/hooks/stop"
           }
         ]
       }

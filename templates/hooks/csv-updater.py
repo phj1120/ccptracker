@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-CSV Updater - Claude 대화 데이터 CSV 업데이트 도구
+CSV Updater - Claude conversation data CSV update tool
 """
 
 import csv
@@ -8,14 +8,14 @@ import sys
 import os
 from datetime import datetime
 
-# 프로젝트 루트의 cpm 디렉토리 찾기
+# Find ccptracker directory in project root
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-CPM_DIR = os.path.dirname(SCRIPT_DIR)
-CSV_FILE = os.path.join(CPM_DIR, 'data', 'claude-conversations.csv')
+CCPTRACKER_DIR = os.path.dirname(SCRIPT_DIR)
+CSV_FILE = os.path.join(CCPTRACKER_DIR, 'data', 'ccptracker.csv')
 
 
 def read_csv():
-    """CSV 파일 읽기"""
+    """Read CSV file"""
     if not os.path.exists(CSV_FILE):
         return []
 
@@ -25,7 +25,7 @@ def read_csv():
 
 
 def write_csv(rows):
-    """CSV 파일 쓰기"""
+    """Write CSV file"""
     if not rows:
         return
 
@@ -39,7 +39,7 @@ def write_csv(rows):
 
 
 def format_datetime_id(dt_string):
-    """YYYY-MM-DD HH:MM:SS -> YYYYMMDDHHmmss (ID용)"""
+    """YYYY-MM-DD HH:MM:SS -> YYYYMMDDHHmmss (for ID)"""
     try:
         dt = datetime.strptime(dt_string, '%Y-%m-%d %H:%M:%S')
         return dt.strftime('%Y%m%d%H%M%S')
@@ -48,12 +48,12 @@ def format_datetime_id(dt_string):
 
 
 def add_row(session_id, timestamp, project_path, user_prompt):
-    """새 행 추가"""
+    """Add new row"""
     rows = read_csv()
 
-    # ID는 숫자 형식, request_dtm은 가독성 있는 형식
+    # ID is numeric format, request_dtm is readable format
     row_id = format_datetime_id(timestamp)
-    request_dtm = timestamp  # YYYY-MM-DD HH:MM:SS 형식 그대로 사용
+    request_dtm = timestamp  # Use YYYY-MM-DD HH:MM:SS format as-is
 
     new_row = {
         'id': row_id,
@@ -68,28 +68,28 @@ def add_row(session_id, timestamp, project_path, user_prompt):
 
     rows.append(new_row)
     write_csv(rows)
-    print(f"✅ CSV에 새 행 추가됨 (ID: {row_id}, Session: {session_id})")
+    print(f"✅ New row added to CSV (ID: {row_id}, Session: {session_id})")
 
 
 def update_response(session_id, response, duration, tools_used, tools_count):
-    """응답 정보 업데이트 (가장 최근 행)"""
+    """Update response information (most recent row)"""
     rows = read_csv()
 
-    # 가장 최근 행 업데이트
+    # Update most recent row
     if rows:
         response_dtm = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         rows[-1]['response'] = response
         rows[-1]['response_dtm'] = response_dtm
 
     write_csv(rows)
-    print(f"✅ 응답 정보 업데이트 완료 (Session: {session_id})")
+    print(f"✅ Response information updated (Session: {session_id})")
 
 
 def update_satisfaction(session_id, score, comment):
-    """만족도 정보 업데이트 (가장 최근 행)"""
+    """Update satisfaction information (most recent row)"""
     rows = read_csv()
 
-    # 가장 최근 행 업데이트
+    # Update most recent row
     if rows:
         star_dtm = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         rows[-1]['star'] = str(score)
@@ -97,11 +97,11 @@ def update_satisfaction(session_id, score, comment):
         rows[-1]['star_dtm'] = star_dtm
 
     write_csv(rows)
-    print(f"✅ 만족도 정보 업데이트 완료 (Session: {session_id}, Score: {score}/5)")
+    print(f"✅ Satisfaction information updated (Session: {session_id}, Score: {score}/5)")
 
 
 def get_latest_row():
-    """가장 최근 행 반환"""
+    """Return most recent row"""
     rows = read_csv()
     if rows:
         return rows[-1]

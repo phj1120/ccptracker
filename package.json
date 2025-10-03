@@ -1,7 +1,7 @@
 {
   "name": "ccptracker",
   "version": "1.0.0",
-  "description": "Claude Code conversation tracker and satisfaction logger",
+  "description": "Automatically track and rate your Claude Code conversations with satisfaction scoring and CSV export capabilities",
   "main": "lib/index.js",
   "bin": {
     "ccptracker": "bin/cli.js"
@@ -12,12 +12,18 @@
   },
   "keywords": [
     "claude",
+    "claude-code",
     "conversation",
     "tracker",
     "cli",
     "satisfaction",
     "logging",
-    "claude-code"
+    "rating",
+    "csv",
+    "export",
+    "analytics",
+    "ai",
+    "chatbot"
   ],
   "author": "phjun1120",
   "license": "MIT",
@@ -44,6 +50,7 @@
     "bin/",
     "lib/",
     "templates/",
-    "README.md"
+    "README.md",
+    "README_KR.md"
   ]
 }

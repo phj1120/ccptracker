@@ -12,7 +12,7 @@ try:
     with open(transcript_path, 'r') as f:
         lines = f.readlines()
 
-    # 마지막 assistant 응답 찾기
+    # Find last assistant response
     last_response = ""
     tools_used = set()
     response_texts = []
@@ -20,10 +20,10 @@ try:
     for line in lines:
         try:
             data = json.loads(line)
-            # message 객체 안에 role과 content가 있음
+            # message object contains role and content
             message = data.get('message', {})
             if message.get('role') == 'assistant':
-                # 텍스트 응답 수집
+                # Collect text responses
                 content = message.get('content', [])
                 current_texts = []
                 for item in content:
@@ -34,20 +34,20 @@ try:
                                 current_texts.append(text)
                         elif item.get('type') == 'tool_use':
                             tools_used.add(item.get('name', ''))
-                # 현재 assistant 메시지의 모든 텍스트를 결합하여 저장
+                # Store all text from current assistant message combined
                 if current_texts:
-                    response_texts = current_texts  # 마지막 응답으로 계속 업데이트
+                    response_texts = current_texts  # Keep updating to last response
         except:
             continue
 
-    # 마지막 응답의 모든 텍스트를 결합
+    # Combine all text from last response
     last_response = ' '.join(response_texts)
 
-    # 응답이 너무 길면 잘라내기 (CSV 저장용)
+    # Truncate if response is too long (for CSV storage)
     if len(last_response) > 10000:
-        last_response = last_response[:10000] + "...(생략)"
+        last_response = last_response[:10000] + "...(truncated)"
 
-    # 결과 출력
+    # Output result
     print(json.dumps({
         'response': last_response,
         'tools_used': ','.join(sorted(tools_used)),

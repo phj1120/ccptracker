@@ -13,7 +13,7 @@ program
   .description('Claude Code conversation tracker and satisfaction logger')
   .version(packageJson.version);
 
-// init 명령어 - ccptracker 설치
+// init command - ccptracker installation
 program
   .command('init')
   .description('Initialize ccptracker in the current project')
@@ -48,7 +48,7 @@ program
     }
   });
 
-// status 명령어 - ccptracker 상태 확인
+// status command - check ccptracker status
 program
   .command('status')
   .description('Show ccptracker status and statistics')
@@ -83,7 +83,7 @@ program
     }
   });
 
-// remove 명령어 - ccptracker 제거
+// remove command - ccptracker removal
 program
   .command('remove')
   .description('Remove ccptracker from the current project')
@@ -124,7 +124,7 @@ program
     }
   });
 
-// export 명령어 - 데이터 내보내기
+// export command - data export
 program
   .command('export')
   .description('Export conversation data to different formats')
@@ -147,14 +147,14 @@ program
     }
   });
 
-// 에러 핸들링
+// Error handling
 program.on('command:*', () => {
   console.error(chalk.red('❌ Invalid command: %s'), program.args.join(' '));
   console.log(chalk.yellow('See --help for a list of available commands.'));
   process.exit(1);
 });
 
-// 프로그램 실행
+// Program execution
 if (process.argv.length === 2) {
   program.help();
 } else {
