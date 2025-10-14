@@ -80,19 +80,26 @@ fi
     echo "File size: $(wc -c < "$TRANSCRIPT_PATH" 2>/dev/null || echo 0) bytes"
 } >> "$CCPTRACKER_DIR/logs/stop-hook-debug.log"
 
+# Extract session ID from input JSON (if available)
+HOOK_SESSION_ID=$(echo "$INPUT" | node -pe "JSON.parse(require('fs').readFileSync(0, 'utf8')).session_id || ''" 2>/dev/null || echo "")
+
 # Extract response content (last assistant message from transcript)
 RESPONSE=""
 TOOLS_USED=""
 TOOLS_COUNT=0
+MODEL_ID=""
+USAGE_JSON=""
 
 if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
-    # Parse transcript with Node.js script
-    RESPONSE=$(node "$SCRIPT_DIR/stop-parse-transcript.js" "$TRANSCRIPT_PATH")
+    # Parse transcript with Node.js script, passing session ID
+    RESPONSE=$(node "$SCRIPT_DIR/stop-parse-transcript.js" "$TRANSCRIPT_PATH" "$HOOK_SESSION_ID")
 
     # JSON parsing
     CLAUDE_RESPONSE=$(echo "$RESPONSE" | node -pe "JSON.parse(require('fs').readFileSync(0, 'utf8')).response || ''")
     TOOLS_USED=$(echo "$RESPONSE" | node -pe "JSON.parse(require('fs').readFileSync(0, 'utf8')).tools_used || ''")
     TOOLS_COUNT=$(echo "$RESPONSE" | node -pe "JSON.parse(require('fs').readFileSync(0, 'utf8')).tools_count || 0")
+    MODEL_ID=$(echo "$RESPONSE" | node -pe "JSON.parse(require('fs').readFileSync(0, 'utf8')).model || ''")
+    USAGE_JSON=$(echo "$RESPONSE" | node -pe "JSON.stringify(JSON.parse(require('fs').readFileSync(0, 'utf8')).usage || {})")
 
     # Debug: parsing results
     {
@@ -101,6 +108,9 @@ if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
         echo "Response preview: ${CLAUDE_RESPONSE:0:200}"
         echo "Tools used: $TOOLS_USED"
         echo "Tools count: $TOOLS_COUNT"
+        echo "Model: $MODEL_ID"
+        echo "Usage JSON: $USAGE_JSON"
+        echo "Session ID: $HOOK_SESSION_ID"
     } >> "$CCPTRACKER_DIR/logs/stop-hook-debug.log"
 fi
 
@@ -111,8 +121,8 @@ END_TIME=$(date '+%Y-%m-%d %H:%M:%S')
 # Calculate in seconds
 DURATION=$(node -pe "Math.floor((new Date('$END_TIME') - new Date('$START_TIME')) / 1000)")
 
-# Update CSV (response information)
-node "$SCRIPT_DIR/csv-updater.js" update-response "$SESSION_ID" "$CLAUDE_RESPONSE" "$DURATION" "$TOOLS_USED" "$TOOLS_COUNT"
+# Update CSV (response information) - now passes usage JSON as 7th parameter
+node "$SCRIPT_DIR/csv-updater.js" update-response "$SESSION_ID" "$CLAUDE_RESPONSE" "$DURATION" "$TOOLS_USED" "$TOOLS_COUNT" "$MODEL_ID" "$USAGE_JSON"
 
 # Save current response session information to SESSION_FILE (for next satisfaction rating)
 cat > "$SESSION_FILE" << EOF

@@ -11,7 +11,80 @@ const SCRIPT_DIR = path.dirname(path.resolve(__filename));
 const CCPTRACKER_DIR = path.dirname(SCRIPT_DIR);
 const CSV_FILE = path.join(CCPTRACKER_DIR, 'data', 'ccptracker.csv');
 
-const FIELDNAMES = ['id', 'request', 'response', 'star', 'star_desc', 'request_dtm', 'response_dtm', 'star_dtm'];
+const FIELDNAMES = ['id', 'request', 'response', 'star', 'star_desc', 'request_dtm', 'response_dtm', 'star_dtm', 'request_tokens_est', 'response_tokens_est', 'total_tokens_est', 'model', 'estimated_cost', 'cost_currency', 'actual_input_tokens', 'actual_output_tokens', 'cache_creation_tokens', 'cache_read_tokens'];
+
+// Anthropic pricing (as of 2025, USD per token)
+const PRICING = {
+    'claude-sonnet-4-5': {
+        input: 3.00 / 1_000_000,
+        output: 15.00 / 1_000_000,
+        cache_creation: 3.75 / 1_000_000,  // 25% more than input
+        cache_read: 0.30 / 1_000_000       // 90% less than input
+    },
+    'claude-sonnet-3-5': {
+        input: 3.00 / 1_000_000,
+        output: 15.00 / 1_000_000,
+        cache_creation: 3.75 / 1_000_000,
+        cache_read: 0.30 / 1_000_000
+    },
+    'claude-opus-3': {
+        input: 15.00 / 1_000_000,
+        output: 75.00 / 1_000_000,
+        cache_creation: 18.75 / 1_000_000,
+        cache_read: 1.50 / 1_000_000
+    },
+    'default': {
+        input: 3.00 / 1_000_000,
+        output: 15.00 / 1_000_000,
+        cache_creation: 3.75 / 1_000_000,
+        cache_read: 0.30 / 1_000_000
+    }
+};
+
+/**
+ * Estimate token count from text
+ * Approximation: ~3-4 characters per token (mixed English/Korean)
+ */
+function estimateTokens(text) {
+    if (!text || typeof text !== 'string') return 0;
+    return Math.ceil(text.length / 3.5);
+}
+
+/**
+ * Calculate cost based on token counts and model
+ * Supports both estimated (simple) and actual (with cache) calculations
+ */
+function calculateCost(inputTokens, outputTokens, model, cacheCreationTokens = 0, cacheReadTokens = 0) {
+    const pricing = PRICING[model] || PRICING['default'];
+
+    // If cache tokens are provided, calculate with detailed pricing
+    if (cacheCreationTokens > 0 || cacheReadTokens > 0) {
+        const regularInputCost = inputTokens * pricing.input;
+        const cacheCreationCost = cacheCreationTokens * pricing.cache_creation;
+        const cacheReadCost = cacheReadTokens * pricing.cache_read;
+        const outputCost = outputTokens * pricing.output;
+        return (regularInputCost + cacheCreationCost + cacheReadCost + outputCost).toFixed(6);
+    }
+
+    // Simple calculation for estimated tokens
+    const inputCost = inputTokens * pricing.input;
+    const outputCost = outputTokens * pricing.output;
+    return (inputCost + outputCost).toFixed(6);
+}
+
+/**
+ * Extract model name from model identifier
+ * e.g., "claude-sonnet-4-5-20250929" -> "claude-sonnet-4-5"
+ */
+function normalizeModelName(modelId) {
+    if (!modelId) return 'claude-sonnet-4-5';
+
+    if (modelId.includes('sonnet-4')) return 'claude-sonnet-4-5';
+    if (modelId.includes('sonnet-3.5') || modelId.includes('sonnet-3-5')) return 'claude-sonnet-3-5';
+    if (modelId.includes('opus')) return 'claude-opus-3';
+
+    return 'claude-sonnet-4-5'; // default
+}
 
 /**
  * Simple CSV parser
@@ -198,6 +271,9 @@ function addRow(sessionId, timestamp, projectPath, userPrompt) {
     const localTime = getLocalDatetime();
     const rowId = formatDatetimeId(localTime);
 
+    // Estimate request tokens
+    const requestTokens = estimateTokens(userPrompt);
+
     const newRow = {
         id: rowId,
         request: userPrompt,
@@ -206,7 +282,17 @@ function addRow(sessionId, timestamp, projectPath, userPrompt) {
         star_desc: '',
         request_dtm: localTime,
         response_dtm: '',
-        star_dtm: ''
+        star_dtm: '',
+        request_tokens_est: String(requestTokens),
+        response_tokens_est: '',
+        total_tokens_est: '',
+        model: '',
+        estimated_cost: '',
+        cost_currency: '',
+        actual_input_tokens: '',
+        actual_output_tokens: '',
+        cache_creation_tokens: '',
+        cache_read_tokens: ''
     };
 
     rows.push(newRow);
@@ -216,14 +302,58 @@ function addRow(sessionId, timestamp, projectPath, userPrompt) {
 
 /**
  * Update response information (most recent row)
+ * Now accepts usage object with detailed token breakdown
  */
-function updateResponse(sessionId, response, duration, toolsUsed, toolsCount) {
+function updateResponse(sessionId, response, duration, toolsUsed, toolsCount, modelId, usageData) {
     const rows = readCSV();
 
     // Update most recent row
     if (rows.length > 0) {
-        rows[rows.length - 1].response = response;
-        rows[rows.length - 1].response_dtm = getLocalDatetime();
+        const row = rows[rows.length - 1];
+
+        // Estimate response tokens (for comparison)
+        const responseTokensEst = estimateTokens(response);
+        const requestTokensEst = parseInt(row.request_tokens_est || '0');
+        const totalTokensEst = requestTokensEst + responseTokensEst;
+
+        // Parse usage data if provided
+        let actualInputTokens = 0;
+        let actualOutputTokens = 0;
+        let cacheCreationTokens = 0;
+        let cacheReadTokens = 0;
+
+        if (usageData && typeof usageData === 'object') {
+            actualInputTokens = usageData.input_tokens || 0;
+            actualOutputTokens = usageData.output_tokens || 0;
+            cacheCreationTokens = usageData.cache_creation_tokens || 0;
+            cacheReadTokens = usageData.cache_read_tokens || 0;
+        }
+
+        // Normalize model name
+        const normalizedModel = normalizeModelName(modelId);
+
+        // Calculate cost with actual usage if available
+        let cost;
+        if (actualInputTokens > 0 || actualOutputTokens > 0) {
+            // Use actual tokens with cache breakdown
+            const regularInputTokens = actualInputTokens - cacheCreationTokens - cacheReadTokens;
+            cost = calculateCost(regularInputTokens, actualOutputTokens, normalizedModel, cacheCreationTokens, cacheReadTokens);
+        } else {
+            // Fall back to estimated tokens
+            cost = calculateCost(requestTokensEst, responseTokensEst, normalizedModel);
+        }
+
+        row.response = response;
+        row.response_dtm = getLocalDatetime();
+        row.response_tokens_est = String(responseTokensEst);
+        row.total_tokens_est = String(totalTokensEst);
+        row.model = normalizedModel;
+        row.estimated_cost = cost;
+        row.cost_currency = 'USD';
+        row.actual_input_tokens = actualInputTokens > 0 ? String(actualInputTokens) : '';
+        row.actual_output_tokens = actualOutputTokens > 0 ? String(actualOutputTokens) : '';
+        row.cache_creation_tokens = cacheCreationTokens > 0 ? String(cacheCreationTokens) : '';
+        row.cache_read_tokens = cacheReadTokens > 0 ? String(cacheReadTokens) : '';
     }
 
     saveCSV(rows);
@@ -279,12 +409,20 @@ if (require.main === module) {
             addRow(args[1], args[2], args[3], args[4]);
 
         } else if (command === 'update-response') {
-            // update-response <session_id> <response> <duration> <tools_used> <tools_count>
-            if (args.length < 6) {
-                console.log("Usage: csv-updater.js update-response <session_id> <response> <duration> <tools_used> <tools_count>");
+            // update-response <session_id> <response> <duration> <tools_used> <tools_count> <model_id> <usage_json>
+            if (args.length < 8) {
+                console.log("Usage: csv-updater.js update-response <session_id> <response> <duration> <tools_used> <tools_count> <model_id> <usage_json>");
                 process.exit(1);
             }
-            updateResponse(args[1], args[2], args[3], args[4], args[5]);
+            // Parse usage JSON if provided
+            let usageData = null;
+            try {
+                usageData = JSON.parse(args[7]);
+            } catch (e) {
+                // If parsing fails, treat as legacy format (single number)
+                usageData = { input_tokens: parseInt(args[7]) || 0 };
+            }
+            updateResponse(args[1], args[2], args[3], args[4], args[5], args[6], usageData);
 
         } else if (command === 'update-satisfaction') {
             // update-satisfaction <session_id> <score> <comment>
