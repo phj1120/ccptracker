@@ -4,6 +4,7 @@ const { Command } = require('commander');
 const chalk = require('chalk');
 const packageJson = require('../package.json');
 const installer = require('../lib/installer');
+const globalInstaller = require('../lib/global-installer');
 const config = require('../lib/config');
 
 const program = new Command();
@@ -143,6 +144,118 @@ program
       }
     } catch (error) {
       console.error(chalk.red('❌ Error during export:'), error.message);
+      process.exit(1);
+    }
+  });
+
+// global command - global installation
+program
+  .command('global')
+  .description('Install ccptracker globally (recommended for cross-platform and multi-project usage)')
+  .option('-f, --force', 'Force installation even if already exists')
+  .action(async (options) => {
+    try {
+      console.log(chalk.blue('🌍 Installing ccptracker globally...'));
+
+      const result = await globalInstaller.installGlobal(options);
+
+      if (result.success) {
+        console.log(chalk.green('✅ ccptracker has been successfully installed globally!'));
+        console.log(chalk.cyan('✅ ~/.ccptracker/ directory created'));
+        console.log(chalk.cyan('✅ Global hooks registered in ~/.claude/settings.json'));
+        console.log(chalk.yellow('\n💡 Benefits of global installation:'));
+        console.log(chalk.gray('   • Works across all projects automatically'));
+        console.log(chalk.gray('   • Cross-platform support (Windows, macOS, Linux)'));
+        console.log(chalk.gray('   • Centralized CSV data with project information'));
+        console.log(chalk.gray('   • No need to install per project'));
+        console.log(chalk.yellow('\n💾 Data storage:'));
+        console.log(chalk.gray('   • Global: ~/.ccptracker/data/ccptracker.csv (default)'));
+        console.log(chalk.gray('   • Change with: ccptracker config --location project'));
+      } else {
+        console.log(chalk.red('❌ Installation failed:'), result.error);
+        process.exit(1);
+      }
+    } catch (error) {
+      console.error(chalk.red('❌ Error during installation:'), error.message);
+      process.exit(1);
+    }
+  });
+
+// unglobal command - remove global installation
+program
+  .command('unglobal')
+  .description('Remove ccptracker global installation')
+  .option('-f, --force', 'Force removal without confirmation')
+  .action(async (options) => {
+    try {
+      if (!options.force) {
+        const inquirer = require('inquirer');
+        const answers = await inquirer.prompt([{
+          type: 'confirm',
+          name: 'confirm',
+          message: 'Are you sure you want to remove global ccptracker? (Data will be preserved)',
+          default: false
+        }]);
+
+        if (!answers.confirm) {
+          console.log(chalk.yellow('Operation cancelled'));
+          return;
+        }
+      }
+
+      console.log(chalk.blue('🗑️  Removing global ccptracker...'));
+
+      const result = await globalInstaller.removeGlobal();
+
+      if (result.success) {
+        console.log(chalk.green('✅ Global ccptracker has been successfully removed'));
+        console.log(chalk.cyan('✅ Hooks unregistered from ~/.claude/settings.json'));
+        console.log(chalk.gray('   Note: Data in ~/.ccptracker/ has been preserved'));
+      } else {
+        console.log(chalk.red('❌ Removal failed:'), result.error);
+        process.exit(1);
+      }
+    } catch (error) {
+      console.error(chalk.red('❌ Error during removal:'), error.message);
+      process.exit(1);
+    }
+  });
+
+// config command - configure ccptracker
+program
+  .command('config')
+  .description('Configure ccptracker settings')
+  .option('-l, --location <location>', 'Set data storage location (global or project)')
+  .option('--show', 'Show current configuration')
+  .action(async (options) => {
+    try {
+      if (options.show) {
+        const currentConfig = await globalInstaller.getConfig();
+        console.log(chalk.blue('⚙️  Current Configuration:'));
+        console.log(chalk.cyan('Data location:'), currentConfig.dataLocation);
+        console.log(chalk.cyan('CSV path:'), currentConfig.csvPath);
+        return;
+      }
+
+      if (options.location) {
+        if (options.location !== 'global' && options.location !== 'project') {
+          console.log(chalk.red('❌ Invalid location. Use "global" or "project"'));
+          process.exit(1);
+        }
+
+        await globalInstaller.setDataLocation(options.location);
+        console.log(chalk.green(`✅ Data location set to: ${options.location}`));
+
+        if (options.location === 'global') {
+          console.log(chalk.gray('   CSV will be saved to: ~/.ccptracker/data/ccptracker.csv'));
+        } else {
+          console.log(chalk.gray('   CSV will be saved to: [project]/ccptracker/data/ccptracker.csv'));
+        }
+      } else {
+        console.log(chalk.yellow('Usage: ccptracker config --location <global|project> or --show'));
+      }
+    } catch (error) {
+      console.error(chalk.red('❌ Error:'), error.message);
       process.exit(1);
     }
   });

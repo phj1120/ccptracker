@@ -20,7 +20,22 @@ ccptracker를 사용하면 Claude Code와의 모든 대화를 자동으로 기�
 
 ### 1. 설치
 
-Claude Code 프로젝트 디렉토리에서 다음 명령어를 실행하세요:
+**글로벌 설치 (권장) 🌍**
+
+한 번만 설치하면 모든 프로젝트에서 자동으로 작동합니다 (Windows, macOS, Linux 지원):
+
+```bash
+# 글로벌 설치 - 모든 프로젝트에서 사용 가능
+npx ccptracker global
+
+# 또는 npm으로 전역 설치
+npm install -g ccptracker
+ccptracker global
+```
+
+**프로젝트별 설치 (기존 방식)**
+
+특정 프로젝트에만 설치하려면:
 
 ```bash
 # 기본 설치 (CSV 파일을 Git에서 추적)
@@ -62,7 +77,24 @@ npx ccptracker status
 
 ## 📖 사용법
 
-### 설치 명령어
+### 글로벌 설치 명령어 (권장)
+
+```bash
+# 글로벌 설치
+npx ccptracker global
+
+# 글로벌 설치 제거
+npx ccptracker unglobal
+
+# 설정 확인
+npx ccptracker config --show
+
+# 데이터 저장 위치 변경
+npx ccptracker config --location global    # 글로벌 CSV (기본)
+npx ccptracker config --location project   # 프로젝트별 CSV
+```
+
+### 프로젝트별 설치 명령어 (기존 방식)
 
 ```bash
 # 새 프로젝트에 ccptracker 설치 (CSV 파일을 Git에서 추적)
@@ -110,7 +142,26 @@ npx ccptracker remove --force
 
 ## 📁 파일 구조
 
-ccptracker를 설치하면 다음과 같은 구조가 생성됩니다:
+### 글로벌 설치 구조 (권장)
+
+```
+~/.ccptracker/                # 사용자 홈 디렉토리
+├── config.json               # 글로벌 설정
+├── hooks/                    # 훅 스크립트들 (크로스 플랫폼)
+│   ├── user-prompt-submit.js
+│   ├── stop.js
+│   ├── csv-updater-global.js
+│   └── stop-parse-transcript.js
+├── data/
+│   └── ccptracker.csv        # 모든 프로젝트의 대화 데이터 (프로젝트 정보 포함)
+├── logs/                     # 디버그 로그
+└── temp/                     # 임시 세션 파일
+
+~/.claude/
+└── settings.json             # Claude Code 훅 설정 (글로벌 경로 참조)
+```
+
+### 프로젝트별 설치 구조 (기존 방식)
 
 ```
 your-project/
@@ -133,9 +184,13 @@ your-project/
 
 ### CSV 필드
 
+**글로벌 설치 CSV 필드:**
+
 | 필드 | 설명 | 예시 |
 |------|------|------|
 | `id` | 대화 ID (YYYYMMDDHHmmss) | `20250103134532` |
+| `project_name` | 프로젝트 이름 | `"my-app"` |
+| `project_path` | 프로젝트 경로 | `"/Users/user/projects/my-app"` |
 | `request` | 사용자 프롬프트 | `"React 컴포넌트를 만들어줘"` |
 | `response` | Claude 응답 | `"React 컴포넌트를 만들어드릴게요..."` |
 | `star` | 만족도 평점 (1-5) | `4` |
@@ -143,6 +198,10 @@ your-project/
 | `request_dtm` | 요청 시간 | `2025-01-03 13:45:32` |
 | `response_dtm` | 응답 시간 | `2025-01-03 13:45:45` |
 | `star_dtm` | 평가 시간 | `2025-01-03 13:46:00` |
+| `model` | 사용된 모델 | `"claude-sonnet-4-5"` |
+| `actual_input_tokens` | 실제 입력 토큰 수 | `1234` |
+| `actual_output_tokens` | 실제 출력 토큰 수 | `567` |
+| `estimated_cost` | 예상 비용 (USD) | `0.012345` |
 
 ### JSON 형식 (export)
 
@@ -247,10 +306,15 @@ A: ccptracker는 기존 데이터를 보존합니다. 제거할 때만 `ccptrack
 A: 네, 1-5 숫자 대신 다른 프롬프트를 입력하면 평가 없이 다음 대화로 넘어갑니다.
 
 ### Q: 여러 프로젝트에서 ccptracker를 사용할 수 있나요?
-A: 네, 각 프로젝트마다 독립적으로 설치하고 사용할 수 있습니다.
+A: 네! 글로벌 설치(`npx ccptracker global`)를 사용하면 모든 프로젝트에서 자동으로 작동하며, 하나의 CSV 파일에 프로젝트 정보와 함께 저장됩니다.
 
 ### Q: Windows에서도 작동하나요?
-A: 네, Node.js가 설치되어 있다면 Windows, macOS, Linux 모두에서 작동합니다.
+A: 네! 글로벌 설치는 크로스 플랫폼을 완벽 지원합니다. Node.js만 설치되어 있으면 Windows, macOS, Linux 모두에서 작동합니다.
+
+### Q: 글로벌 설치와 프로젝트별 설치의 차이는?
+A:
+- **글로벌 설치**: 한 번만 설치하면 모든 프로젝트에서 자동 작동. CSV는 `~/.ccptracker/data/`에 중앙 관리. Windows 완벽 지원.
+- **프로젝트별 설치**: 각 프로젝트마다 설치 필요. CSV는 각 프로젝트의 `ccptracker/data/`에 저장. bash 스크립트 사용.
 
 ### Q: CSV 파일이 Git에 추가되는 것을 막으려면?
 A: `--githide` 옵션을 사용하세요: `npx ccptracker init --githide`. 이렇게 하면 CSV 파일도 gitignore에 추가됩니다.

@@ -1,30 +1,36 @@
 #!/usr/bin/env node
 /**
- * CSV Updater - Claude conversation data CSV update tool
+ * Global CSV Updater - Claude conversation data CSV update tool (Global version)
  */
 
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
-// Global ccptracker directory
+// Global configuration
 const GLOBAL_DIR = path.join(os.homedir(), '.ccptracker');
-const CONFIG_FILE = path.join(GLOBAL_DIR, 'config.json');
+const CONFIG_PATH = path.join(GLOBAL_DIR, 'config.json');
 
-// Get CSV file path from config
-function getCsvFilePath() {
-  try {
-    if (fs.existsSync(CONFIG_FILE)) {
-      const config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
-      return config.csvPath || path.join(GLOBAL_DIR, 'data', 'ccptracker.csv');
+// Read configuration to determine CSV location
+function getCSVPath(projectPath) {
+  let config = { dataLocation: 'global', csvPath: path.join(GLOBAL_DIR, 'data', 'ccptracker.csv') };
+
+  if (fs.existsSync(CONFIG_PATH)) {
+    try {
+      config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+    } catch (e) {
+      // Use default config
     }
-  } catch (e) {
-    // Fall back to default
   }
-  return path.join(GLOBAL_DIR, 'data', 'ccptracker.csv');
+
+  if (config.dataLocation === 'project' && projectPath) {
+    return path.join(projectPath, 'ccptracker', 'data', 'ccptracker.csv');
+  }
+
+  return config.csvPath;
 }
 
-const FIELDNAMES = ['id', 'project_path', 'project_name', 'request', 'response', 'star', 'star_desc', 'request_dtm', 'response_dtm', 'star_dtm', 'request_tokens_est', 'response_tokens_est', 'total_tokens_est', 'model', 'estimated_cost', 'cost_currency', 'actual_input_tokens', 'actual_output_tokens', 'cache_creation_tokens', 'cache_read_tokens'];
+const FIELDNAMES = ['id', 'project_name', 'project_path', 'request', 'response', 'star', 'star_desc', 'request_dtm', 'response_dtm', 'star_dtm', 'duration', 'tools_used', 'tools_count', 'model', 'request_tokens_est', 'response_tokens_est', 'total_tokens_est', 'actual_input_tokens', 'actual_output_tokens', 'cache_creation_tokens', 'cache_read_tokens', 'estimated_cost', 'cost_currency'];
 
 // Anthropic pricing (as of 2025, USD per token)
 const PRICING = {
@@ -114,10 +120,10 @@ function parseCSV(content) {
     // First, extract headers
     const headerEnd = content.indexOf('\n');
     if (headerEnd === -1) return [];
-    
+
     const headerLine = content.substring(0, headerEnd);
     const headers = headerLine.split(',').map(h => h.trim());
-    
+
     // Start parsing from after the header line
     i = headerEnd + 1;
 
@@ -140,7 +146,7 @@ function parseCSV(content) {
             // End of row
             if (currentField.trim() || currentRow.length > 0) {
                 currentRow.push(currentField.trim());
-                
+
                 // Create row object
                 if (currentRow.length > 0 && currentRow.some(field => field.trim())) {
                     const row = {};
@@ -149,7 +155,7 @@ function parseCSV(content) {
                     });
                     rows.push(row);
                 }
-                
+
                 currentRow = [];
                 currentField = '';
             }
@@ -201,10 +207,10 @@ function writeCSV(rows) {
 /**
  * Read CSV file
  */
-function readCSV() {
-    const CSV_FILE = getCsvFilePath();
-    // Ensure directory exists
+function readCSV(projectPath) {
+    const CSV_FILE = getCSVPath(projectPath);
     const csvDir = path.dirname(CSV_FILE);
+
     if (!fs.existsSync(csvDir)) {
         fs.mkdirSync(csvDir, { recursive: true });
     }
@@ -228,11 +234,12 @@ function readCSV() {
 /**
  * Write CSV file
  */
-function saveCSV(rows) {
+function saveCSV(rows, projectPath) {
     if (!rows || rows.length === 0) return;
 
+    const CSV_FILE = getCSVPath(projectPath);
+
     try {
-        const CSV_FILE = getCsvFilePath();
         const content = writeCSV(rows);
         fs.writeFileSync(CSV_FILE, content, 'utf8');
     } catch (error) {
@@ -277,10 +284,10 @@ function formatDatetimeId(dtString) {
 }
 
 /**
- * Add new row
+ * Add new row with project information
  */
-function addRow(sessionId, timestamp, projectPath, projectName, userPrompt) {
-    const rows = readCSV();
+function addRow(sessionId, timestamp, projectPath, userPrompt) {
+    const rows = readCSV(projectPath);
 
     // Use local time for both ID and request_dtm
     const localTime = getLocalDatetime();
@@ -289,10 +296,13 @@ function addRow(sessionId, timestamp, projectPath, projectName, userPrompt) {
     // Estimate request tokens
     const requestTokens = estimateTokens(userPrompt);
 
+    // Extract project name from path
+    const projectName = path.basename(projectPath);
+
     const newRow = {
         id: rowId,
-        project_path: projectPath,
         project_name: projectName,
+        project_path: projectPath,
         request: userPrompt,
         response: '',
         star: '',
@@ -300,20 +310,23 @@ function addRow(sessionId, timestamp, projectPath, projectName, userPrompt) {
         request_dtm: localTime,
         response_dtm: '',
         star_dtm: '',
+        duration: '',
+        tools_used: '',
+        tools_count: '',
+        model: '',
         request_tokens_est: String(requestTokens),
         response_tokens_est: '',
         total_tokens_est: '',
-        model: '',
-        estimated_cost: '',
-        cost_currency: '',
         actual_input_tokens: '',
         actual_output_tokens: '',
         cache_creation_tokens: '',
-        cache_read_tokens: ''
+        cache_read_tokens: '',
+        estimated_cost: '',
+        cost_currency: ''
     };
 
     rows.push(newRow);
-    saveCSV(rows);
+    saveCSV(rows, projectPath);
     console.log(`✅ New row added to CSV (ID: ${rowId}, Project: ${projectName}, Session: ${sessionId})`);
 }
 
@@ -321,8 +334,8 @@ function addRow(sessionId, timestamp, projectPath, projectName, userPrompt) {
  * Update response information (most recent row)
  * Now accepts usage object with detailed token breakdown
  */
-function updateResponse(sessionId, response, duration, toolsUsed, toolsCount, modelId, usageData) {
-    const rows = readCSV();
+function updateResponse(sessionId, projectPath, response, duration, toolsUsed, toolsCount, modelId, usageData) {
+    const rows = readCSV(projectPath);
 
     // Update most recent row
     if (rows.length > 0) {
@@ -342,8 +355,8 @@ function updateResponse(sessionId, response, duration, toolsUsed, toolsCount, mo
         if (usageData && typeof usageData === 'object') {
             actualInputTokens = usageData.input_tokens || 0;
             actualOutputTokens = usageData.output_tokens || 0;
-            cacheCreationTokens = usageData.cache_creation_tokens || 0;
-            cacheReadTokens = usageData.cache_read_tokens || 0;
+            cacheCreationTokens = usageData.cache_creation_input_tokens || usageData.cache_creation_tokens || 0;
+            cacheReadTokens = usageData.cache_read_input_tokens || usageData.cache_read_tokens || 0;
         }
 
         // Normalize model name
@@ -362,6 +375,9 @@ function updateResponse(sessionId, response, duration, toolsUsed, toolsCount, mo
 
         row.response = response;
         row.response_dtm = getLocalDatetime();
+        row.duration = duration;
+        row.tools_used = toolsUsed;
+        row.tools_count = toolsCount;
         row.response_tokens_est = String(responseTokensEst);
         row.total_tokens_est = String(totalTokensEst);
         row.model = normalizedModel;
@@ -373,15 +389,15 @@ function updateResponse(sessionId, response, duration, toolsUsed, toolsCount, mo
         row.cache_read_tokens = cacheReadTokens > 0 ? String(cacheReadTokens) : '';
     }
 
-    saveCSV(rows);
+    saveCSV(rows, projectPath);
     console.log(`✅ Response information updated (Session: ${sessionId})`);
 }
 
 /**
  * Update satisfaction information (most recent row)
  */
-function updateSatisfaction(sessionId, score, comment) {
-    const rows = readCSV();
+function updateSatisfaction(sessionId, projectPath, score, comment) {
+    const rows = readCSV(projectPath);
 
     // Update most recent row
     if (rows.length > 0) {
@@ -390,15 +406,15 @@ function updateSatisfaction(sessionId, score, comment) {
         rows[rows.length - 1].star_dtm = getLocalDatetime();
     }
 
-    saveCSV(rows);
+    saveCSV(rows, projectPath);
     console.log(`✅ Satisfaction information updated (Session: ${sessionId}, Score: ${score}/5)`);
 }
 
 /**
  * Get latest row
  */
-function getLatestRow() {
-    const rows = readCSV();
+function getLatestRow(projectPath) {
+    const rows = readCSV(projectPath);
     if (rows.length > 0) {
         return rows[rows.length - 1];
     }
@@ -410,7 +426,7 @@ if (require.main === module) {
     const args = process.argv.slice(2);
 
     if (args.length < 1) {
-        console.log("Usage: csv-updater.js [add|update-response|update-satisfaction|get-latest]");
+        console.log("Usage: csv-updater-global.js [add|update-response|update-satisfaction|get-latest]");
         process.exit(1);
     }
 
@@ -418,39 +434,44 @@ if (require.main === module) {
 
     try {
         if (command === 'add') {
-            // add <session_id> <timestamp> <project_path> <project_name> <user_prompt>
-            if (args.length < 6) {
-                console.log("Usage: csv-updater.js add <session_id> <timestamp> <project_path> <project_name> <user_prompt>");
+            // add <session_id> <timestamp> <project_path> <user_prompt>
+            if (args.length < 5) {
+                console.log("Usage: csv-updater-global.js add <session_id> <timestamp> <project_path> <user_prompt>");
                 process.exit(1);
             }
-            addRow(args[1], args[2], args[3], args[4], args[5]);
+            addRow(args[1], args[2], args[3], args[4]);
 
         } else if (command === 'update-response') {
-            // update-response <session_id> <response> <duration> <tools_used> <tools_count> <model_id> <usage_json>
-            if (args.length < 8) {
-                console.log("Usage: csv-updater.js update-response <session_id> <response> <duration> <tools_used> <tools_count> <model_id> <usage_json>");
+            // update-response <session_id> <project_path> <response> <duration> <tools_used> <tools_count> <model_id> <usage_json>
+            if (args.length < 9) {
+                console.log("Usage: csv-updater-global.js update-response <session_id> <project_path> <response> <duration> <tools_used> <tools_count> <model_id> <usage_json>");
                 process.exit(1);
             }
             // Parse usage JSON if provided
             let usageData = null;
             try {
-                usageData = JSON.parse(args[7]);
+                usageData = JSON.parse(args[8]);
             } catch (e) {
-                // If parsing fails, treat as legacy format (single number)
-                usageData = { input_tokens: parseInt(args[7]) || 0 };
+                // If parsing fails, use empty object
+                usageData = {};
             }
-            updateResponse(args[1], args[2], args[3], args[4], args[5], args[6], usageData);
+            updateResponse(args[1], args[2], args[3], args[4], args[5], args[6], args[7], usageData);
 
         } else if (command === 'update-satisfaction') {
-            // update-satisfaction <session_id> <score> <comment>
-            if (args.length < 4) {
-                console.log("Usage: csv-updater.js update-satisfaction <session_id> <score> <comment>");
+            // update-satisfaction <session_id> <project_path> <score> <comment>
+            if (args.length < 5) {
+                console.log("Usage: csv-updater-global.js update-satisfaction <session_id> <project_path> <score> <comment>");
                 process.exit(1);
             }
-            updateSatisfaction(args[1], args[2], args[3]);
+            updateSatisfaction(args[1], args[2], args[3], args[4]);
 
         } else if (command === 'get-latest') {
-            const row = getLatestRow();
+            // get-latest <project_path>
+            if (args.length < 2) {
+                console.log("Usage: csv-updater-global.js get-latest <project_path>");
+                process.exit(1);
+            }
+            const row = getLatestRow(args[1]);
             if (row) {
                 console.log(JSON.stringify(row, null, 0));
             } else {
@@ -473,5 +494,6 @@ module.exports = {
     addRow,
     updateResponse,
     updateSatisfaction,
-    getLatestRow
+    getLatestRow,
+    getCSVPath
 };

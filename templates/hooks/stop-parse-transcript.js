@@ -7,25 +7,6 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
-const transcriptPath = process.argv[2] || '';
-const sessionId = process.argv[3] || '';
-
-if (!transcriptPath) {
-    console.log(JSON.stringify({
-        response: '',
-        tools_used: '',
-        tools_count: 0,
-        model: '',
-        usage: {
-            input_tokens: 0,
-            output_tokens: 0,
-            cache_creation_tokens: 0,
-            cache_read_tokens: 0
-        }
-    }));
-    process.exit(0);
-}
-
 /**
  * Extract actual token usage from transcript
  * Reads the most recent assistant message's usage field
