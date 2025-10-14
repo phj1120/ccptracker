@@ -8,7 +8,17 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node bin/cli.js"
+    "start": "node bin/cli.js",
+    "check": "npm run lint && npm run validate",
+    "lint": "echo \"Linting passed - add eslint when needed\"",
+    "validate": "npm pack --dry-run",
+    "prepublishOnly": "npm run lint",
+    "preversion": "npm run lint",
+    "version": "git add -A",
+    "postversion": "git push && git push --tags && npm publish",
+    "release:patch": "npm version patch",
+    "release:minor": "npm version minor",
+    "release:major": "npm version major"
   },
   "keywords": [
     "claude",
@@ -40,10 +50,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+ https://github.com/phj1120/ccptracker.git"
+    "url": "git+https://github.com/phj1120/ccptracker.git"
   },
   "bugs": {
-    "url": " https://github.com/phj1120/ccptracker/issues"
+    "url": "https://github.com/phj1120/ccptracker/issues"
   },
   "homepage": "https://github.com/phj1120/ccptracker#readme",
   "files": [

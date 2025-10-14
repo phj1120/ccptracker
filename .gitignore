@@ -1,0 +1,28 @@
+
+# Node.js dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ccptracker conversation tracking data
+ccptracker/*
+!ccptracker/data/
+!ccptracker/data/ccptracker.csv
+
+# IDE files
+.idea/
+.vscode/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp

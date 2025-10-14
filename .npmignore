@@ -1,0 +1,52 @@
+# Development and IDE files
+.idea/
+.vscode/
+*.iml
+
+# Claude Code specific
+.claude/
+ccptracker/
+
+# Git files
+.git/
+.gitignore
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Node development
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage/
+.nyc_output/
+.coverage
+
+# Temporary files
+*.tmp
+*.temp
+.tmp/
+
+# Documentation source (keep only README files)
+docs/
+*.md.backup
+
+# Development scripts
+scripts/
+test/
+*.test.js
+*.spec.js
+
+# Miscellaneous
+UPGRADE_SUMMARY.md
+TODO.md
+CHANGELOG.md.template

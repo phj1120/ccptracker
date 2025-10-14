@@ -16,6 +16,56 @@ ccptracker allows you to automatically record all conversations with Claude Code
 - 🔧 **Automatic Configuration**: `.claude/settings.json` hooks are automatically registered
 - 📝 **Git-Friendly**: Conversation data is tracked by Git by default for team sharing
 
+## 📦 Installation Methods
+
+ccptracker can be used in several ways to accommodate different project needs:
+
+### Option 1: Global Installation (Recommended)
+
+Install ccptracker globally for use across all your projects:
+
+```bash
+# Install globally via npm
+npm install -g ccptracker
+
+# Or use yarn
+yarn global add ccptracker
+
+# Then use it in any project
+ccptracker global        # Set up global tracking
+ccptracker init          # Set up project-specific tracking
+```
+
+### Option 2: npx (No Installation Required)
+
+Use ccptracker directly without installing:
+
+```bash
+# Use latest version directly
+npx ccptracker init
+
+# Use specific version
+npx ccptracker@latest init
+
+# Check status in any project
+npx ccptracker status
+```
+
+### Option 3: Project Dependency
+
+Add ccptracker as a project dependency:
+
+```bash
+# Add to your project
+npm install ccptracker --save-dev
+
+# Or with yarn
+yarn add ccptracker --dev
+
+# Use via npm scripts or npx
+npx ccptracker init
+```
+
 ## 🚀 Quick Start
 
 ### 1. Installation
@@ -247,7 +297,7 @@ A: ccptracker preserves existing data. The `ccptracker/` directory is only delet
 A: Yes, enter anything other than numbers 1-5 to skip rating and continue to the next conversation.
 
 ### Q: Can I use ccptracker in multiple projects?
-A: Yes, you can install and use it independently in each project.
+A: Yes! Use global installation (`npm install -g ccptracker` or `ccptracker global`) for cross-project tracking, or install independently in each project.
 
 ### Q: Does it work on Windows?
 A: Yes, it works on Windows, macOS, and Linux as long as Node.js is installed.
