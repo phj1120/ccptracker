@@ -1,6 +1,6 @@
 {
   "name": "ccptracker",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "description": "Automatically track and rate your Claude Code conversations with satisfaction scoring and CSV export capabilities",
   "main": "lib/index.js",
   "bin": {
